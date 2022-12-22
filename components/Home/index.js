@@ -4,46 +4,12 @@ import FaIcon from 'react-native-vector-icons/FontAwesome';
 import TaskItem from '../TaskItem'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-// import PushNotification from "react-native-push-notification";
+import { useNotification } from '../../hooks/useNotification';
 
-const taskArr = [
-  {
-    id: 1,
-    title: 'Read',
-    isChecked: false,
-    notifTime: '15:00',
-  },
-  {
-    id: 2,
-    title: 'Draw',
-    isChecked: false,
-    notifTime: '18:00',
-  },
-  {
-    id: 3,
-    title: 'Swim',
-    isChecked: false,
-    notifTime: null,
-  },
-  {
-    id: 4,
-    title: 'Run',
-    isChecked: false,
-    notifTime: '06:00',
-  },
-  {
-    id: 5,
-    title: 'Climb',
-    isChecked: false,
-    notifTime: '02:00',
-  },
-  {
-    id: 6,
-    title: 'Fly',
-    isChecked: true,
-    notifTime: '15:00',
-  },
-]
+// TODO feat scheduled notification
+// TODO fix close btn ui
+// TODO feat recurring task
+// TODO feat delete, update task
 
 const AddBtn = ({handleBtnPress, showAddBtn}) => {
   return(
@@ -88,6 +54,9 @@ const InputContainer = ({ inputTask, setInputTask, showInputContainer, setShowIn
     setOpenDateModal(false);
     setDate(currentDate);
   };
+  const deleteAllTask= async()=>{
+    await AsyncStorage.clear()
+  }
   return(
     <>
     { showInputContainer ? 
@@ -113,6 +82,9 @@ const InputContainer = ({ inputTask, setInputTask, showInputContainer, setShowIn
             onChange={onChange}
           /> : null
         }
+        <Pressable>
+          <Text style={styles.deleteAll} onPress={deleteAllTask}>Delete All</Text>
+        </Pressable>
         <CloseBtn handleClose={handleClose} />
       </View> : null
     }
@@ -130,8 +102,6 @@ const saveToStorage = async(data) => {
   }
 }
 
-
-
 const Home = ({ navigation }) => {
   const [task, setTask] = useState([])
   const [inputTask, setInputTask] = useState('')
@@ -139,6 +109,20 @@ const Home = ({ navigation }) => {
   const [showAddBtn, setShowAddBtn] = useState(true)
   const [date, setDate] = useState(new Date())
   const [openDateModal, setOpenDateModal] = useState(false)
+
+  const {
+    displayNotification,
+    displayTriggerNotification,
+    cancelAllNotifications
+  } = useNotification();
+
+  const handleCreateTriggerNotification = (title, body, triggerDate) => {
+    console.log('title1', title)
+    console.log('number date', Number(new Date(triggerDate)));
+    const triggerDateNo = Number(new Date(triggerDate));
+    if(Date.now() >= triggerDateNo) throw Error('Invalid date')
+    displayTriggerNotification(title, body, triggerDateNo);
+  }
 
   const handleBtnPress = () => {
     setShowInputContainer(true)
@@ -174,20 +158,12 @@ const Home = ({ navigation }) => {
       isChecked: false,
       notifTime: date,
     }
-    setTask([taskParams, ...task])
-    await saveToStorage([taskParams, ...task])
-    setInputTask("")
-    setDate(null)
     try {
-      // PushNotification.localNotificationSchedule({
-      //   //... You can use all the options from localNotifications
-      //   message: "My Notification Message", // (required)
-      //   date: new Date(Date.now() + 10 * 1000), // in 60 secs
-      //   allowWhileIdle: false, // (optional) set notification to work while on doze, default: false
-      
-      //   /* Android Only Properties */
-      //   repeatTime: 1, // (optional) Increment of configured repeatType. Check 'Repeating Notifications' section for more info.
-      // });
+      const defaultTitle = 'Notification';
+      handleCreateTriggerNotification(defaultTitle, inputTask, date)
+      setTask([taskParams, ...task])
+      await saveToStorage([taskParams, ...task])
+      setInputTask("")
     } catch(error) {
       console.log('error', error)
     }
@@ -296,7 +272,15 @@ const styles = StyleSheet.create({
   },
   taskNotifText: {
   paddingLeft: 20,
+  },
+  deleteAll: {
+    marginVertical: 20,
+    backgroundColor: 'red',
+    color: 'white',
+    padding: 10,
+    textAlign: 'center'
   }
-});
+}
+);
 
 export default Home
